@@ -1,9 +1,15 @@
-import queue
+import process as pr
+import message
 
-q = queue.Queue()
+p = [pr.Process(1), pr.Process(2), pr.Process(3)]
 
-for i in range(5):
-    q.put(i)
+p[0].set_process_list(p)
+p[1].set_process_list(p)
+p[2].set_process_list(p)
 
-while not q.empty():
-    print (q.get())
+p[0].send()
+
+
+
+
+
