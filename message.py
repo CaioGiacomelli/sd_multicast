@@ -7,5 +7,10 @@ class Message:
         pass
 
     def send(self, process_list):
-        for p in process_list:
-            p.receive(self)
+        for process in process_list:
+            process.receive(self)
+
+    def send_ack(self, process_list):
+        for process in process_list:
+            process.receive_ack(self)
+
