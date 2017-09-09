@@ -10,7 +10,6 @@ class Message:
         for process in process_list:
             process.receive(self)
 
-    def send_ack(self, process_list):
+    def send_ack(self, process_list, m):
         for process in process_list:
-            process.receive_ack(self)
-
+            process.receive_ack(m)

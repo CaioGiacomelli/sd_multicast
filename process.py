@@ -8,6 +8,7 @@ class Process:
         self.pid = pid
         self.ts = 0
         self.queue = Q.PriorityQueue()
+        self.ack_queue = Q.PriorityQueue()
         self.ack_vector = []
         self.process_list = []
 
@@ -17,8 +18,8 @@ class Process:
     def receive(self, m):
         self.queue.put(m.ts, m)
         print("era pra ser 3 mensagens dessa")
-        m.send_ack(self.process_list)
-        pass
+        m.send_ack(self.process_list, m)
+        print("tchau")
 
     def send(self):
         m = message.Message(self.ts)
@@ -26,4 +27,10 @@ class Process:
         m.send(self.process_list)
 
     def receive_ack(self, m):
-        pass
+
+        while not self.ack_queue.empty():
+            if(self.ack_queue.get() == m.ts):
+                print("era pra ser 3 dessas pra cada")
+                self.ack_queue.get()[1] = self.ack_queue.get()[1] + 1
+                pass
+        self.ack_queue.put(m.ts,0)

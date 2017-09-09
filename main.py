@@ -8,8 +8,3 @@ p[1].set_process_list(p)
 p[2].set_process_list(p)
 
 p[0].send()
-
-
-
-
-
