@@ -1,16 +1,9 @@
+from threading import Thread
 
 
 class Message:
 
-    def __init__(self, ts):
+    def __init__(self, ts, is_ack):
         self.ts = ts
         self.count = 0
-        pass
-
-    def send(self, process_list):
-        for process in process_list:
-            process.receive(self)
-
-    def send_ack(self, process_list):
-        for process in process_list:
-            process.receive_ack(self)
+        self.is_ack = is_ack
