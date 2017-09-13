@@ -54,13 +54,15 @@ class Process:
 
                 if not msg: break
 
+            con.close()
+
             if not new_m.is_ack:
                 for ack in self.acks:
                     if ack[0] - 1 == new_m.ts:
                         new_m.count += 1
                 if new_m.count != len(self.process_list):
                     self.queue.append((new_m.ts, new_m))
-                    self.queue.sort()
+                    self.queue.sort(key = lambda tup: tup[0])
 
                 thread3 = main.MyThread(1)
                 thread3.start()

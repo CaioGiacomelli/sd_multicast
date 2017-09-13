@@ -4,73 +4,47 @@ import threading
 import socket
 import pickle
 import copy
-
+import time
+import os
 
 class MyThread (threading.Thread):
 
-    def __init__(self, isack):
+    def __init__(self, isack, pro, ts_ack):
 
         threading.Thread.__init__(self)
         self.isack = isack
+        self.pro = pro
+        self.ts_ack = ts_ack
         # self.name = name
         # self.counter = counter
 
     def run(self):
-        send_request(self.isack)
+        send_request(self.isack, self.pro, self.ts_ack)
 
 
-def send_request(isack):
+def send_request(isack, pro, ts_ack):
+
     if not isack:
-        option = input()
-        while option != '2':
-            if option == '1':
-                for process in p:
-                    tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    tcp.connect((host, process.port))
-                    m1 = message.Message(5, isack)
-                    m_dumped = pickle.dumps(m1)
-                    x = tcp.send(m_dumped)
-                    print(x)
-                    tcp.close()
-            option = input()
+        message_ts = str(pro.ts) + str(pro.pid)
+        message_ts = int(message_ts)
+        print("TS da mensagem enviada: ", message_ts)
+        for process in p:
+            tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp.connect((host, process.port))
+            m1 = message.Message(message_ts, isack)
+            m_dumped = pickle.dumps(m1)
+            x = tcp.send(m_dumped)
+            tcp.close()
+        pro.ts += 1
+
     else:
         for process in p:
             tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             tcp.connect((host, process.port))
-            m1 = message.Message(5, isack)
+            m1 = message.Message(ts_ack, isack)
             m_dumped = pickle.dumps(m1)
             x = tcp.send(m_dumped)
-            print(x)
             tcp.close()
-
-
-
-#
-# p[0].send()
-#
-# #
-# # m4 = message.Message(6)
-# #
-# # m1 = message.Message(5)
-# # m2 = message.Message(3)
-# # m3 = message.Message(1)
-# #
-# # queue = [(m3.ts, m3)]
-# # queue.append((m1.ts, m1))
-# # queue.append((m2.ts, m2))
-# #
-# # queue.sort()
-# #
-# # for x in queue:
-# #     print(x)
-# #     queue.remove(x)
-#
-# # m5 = copy.copy(m4)
-# #
-# # print(m4)
-# # print(m5)
-# # print(m4.ts)
-# # print(m5.t
 
 
 class MyThread2 (threading.Thread):
@@ -90,7 +64,7 @@ class Process:
 
     def __init__(self, pid, host, port):
         self.pid = pid
-        self.ts = 0
+        self.ts = 1
         self.queue = []
         self.acks = []
         self.process_list = []
@@ -103,16 +77,15 @@ class Process:
         self.process_list = process_list
 
     def receive(self):
-
-
+        tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        orig = (self.host, self.port)
+        tcp.bind(orig)
+        tcp.listen(1)
 
         while True:
-            tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            orig = (self.host, self.port)
-            tcp.bind(orig)
-            tcp.listen(1)
 
             con, cliente = tcp.accept()
+
             while True:
                 msg = con.recv(1024)
                 if msg:
@@ -121,41 +94,71 @@ class Process:
 
                 if not msg: break
 
+            con.close()
             if not new_m.is_ack:
                 for ack in self.acks:
                     if ack[0] - 1 == new_m.ts:
                         new_m.count += 1
                 if new_m.count != len(self.process_list):
-                    self.queue.append((new_m.ts, new_m))
-                    self.queue.sort()
 
-                thread3 = MyThread(1)
+                    self.queue.append((new_m.ts, new_m))
+                    self.queue.sort(key=lambda tup: tup[0])
+
+                message_ts = str(self.ts) + str(self.pid)
+                message_ts = int(message_ts)
+                while (new_m.ts > message_ts):
+                    self.ts += 1
+                    message_ts = str(self.ts) + str(self.pid)
+                    message_ts = int(message_ts)
+
+                thread3 = MyThread(1, self, (new_m.ts + 1))
                 thread3.start()
             else:
-
                 found = False
+
                 for check in self.queue:
                     if check[0] == new_m.ts - 1:
                         found = True
                         check[1].count += 1
                         if check[1].count == len(self.process_list):
+                            print('Removendo da fila a mensagem com ts: ', new_m.ts-1, 'enviada para a porta: ', self.port)
                             self.queue.remove(check)
+
 
                 if not found:
                     self.acks.append((new_m.ts, new_m))
 
-            con.close()
 
 host = '192.168.0.105'
+p = []
+process_number = 1
 
-p = [Process(1, host, 5000), Process(2, host, 5001), Process(3, host, 5002), Process(4, host, 5003)]
+print("1 - Cria Processo")
+print("2 - Enviar Mensagem")
+print("3 - Sair")
+option = input()
 
-p[0].set_process_list(p)
-p[1].set_process_list(p)
-p[2].set_process_list(p)
-p[3].set_process_list(p)
+while True:
 
-thread1 = MyThread(0)
-thread1.start()
+    if option == '1':
+        port_number = 5000 + process_number
+        p.append(Process(process_number, host, port_number))
+        process_number += 1
+        for proc in p:
+            proc.set_process_list(p)
+
+    elif option == '2':
+        print("Qual processo enviará a mensagem?")
+        sender = int(input())
+        thread1 = MyThread(0, p[sender-1], 0)
+        thread1.start()
+
+    elif option == '3':
+        os._exit(0)
+
+    print("1 - Cria Processo")
+    print("2 - Enviar Mensagem")
+    print("3 - Sair")
+    option = input()
 
 
